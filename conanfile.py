@@ -13,10 +13,13 @@ class RtMidiConan(ConanFile):
     license = 'http://www.music.mcgill.ca/~gary/rtmidi/#license'
     description = 'A cross-platform library for realtime MIDI input/output'
     source_dir = 'rtmidi-%s' % source_version
+    exports_sources = '*.patch'
 
     def source(self):
         tools.get('http://www.music.mcgill.ca/~gary/rtmidi/release/rtmidi-%s.tar.gz' % self.source_version,
                   sha256='b5017a91df0c2bc4c0d5c6548ac5f9696c5bc0c202f6bec704563c6f6bec64ec')
+
+        tools.patch(patch_file='disable-static.patch', base_path=self.source_dir)
 
     def build(self):
         # RtMIDI doesn't support shadow builds, so build in source_dir.
