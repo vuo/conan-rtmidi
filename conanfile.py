@@ -21,6 +21,8 @@ class RtMidiConan(ConanFile):
 
         tools.patch(patch_file='disable-static.patch', base_path=self.source_dir)
 
+        self.run('mv %s/readme %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
+
     def build(self):
         # RtMIDI doesn't support shadow builds, so build in source_dir.
         with tools.chdir(self.source_dir):
@@ -46,6 +48,8 @@ class RtMidiConan(ConanFile):
     def package(self):
         self.copy('*.h', src=self.source_dir, dst='include/RtMidi')
         self.copy('librtmidi.dylib', src=self.source_dir, dst='lib')
+
+        self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
 
     def package_info(self):
         self.cpp_info.libs = ['rtmidi']
