@@ -1,4 +1,5 @@
 from conans import AutoToolsBuildEnvironment, ConanFile, tools
+import platform
 
 class RtMidiConan(ConanFile):
     name = 'rtmidi'
@@ -7,13 +8,23 @@ class RtMidiConan(ConanFile):
     package_version = '2'
     version = '%s-%s' % (source_version, package_version)
 
-    requires = 'llvm/3.3-2@vuo/stable'
+    requires = 'llvm/3.3-2@vuo/stable', \
+               'vuoutils/1.0@vuo/stable'
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://www.music.mcgill.ca/~gary/rtmidi/'
     license = 'http://www.music.mcgill.ca/~gary/rtmidi/#license'
     description = 'A cross-platform library for realtime MIDI input/output'
     source_dir = 'rtmidi-%s' % source_version
     exports_sources = '*.patch'
+    libs = {
+        'rtmidi': 2,
+    }
+
+    def requirements(self):
+        if platform.system() == 'Linux':
+            self.requires('patchelf/0.10pre-1@vuo/stable')
+        elif platform.system() != 'Darwin':
+            raise Exception('Unknown platform "%s"' % platform.system())
 
     def source(self):
         tools.get('http://www.music.mcgill.ca/~gary/rtmidi/release/rtmidi-%s.tar.gz' % self.source_version,
@@ -24,6 +35,7 @@ class RtMidiConan(ConanFile):
         self.run('mv %s/readme %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
 
     def build(self):
+        import VuoUtils
         # RtMIDI doesn't support shadow builds, so build in source_dir.
         with tools.chdir(self.source_dir):
             autotools = AutoToolsBuildEnvironment(self)
@@ -43,11 +55,16 @@ class RtMidiConan(ConanFile):
                                           '--enable-shared'])
                 autotools.make(args=['--quiet'])
 
-            self.run('install_name_tool -id @rpath/librtmidi.dylib librtmidi.dylib')
+            VuoUtils.fixLibs(self.libs, self.deps_cpp_info)
 
     def package(self):
+        if platform.system() == 'Darwin':
+            libext = 'dylib'
+        elif platform.system() == 'Linux':
+            libext = 'so'
+
         self.copy('*.h', src=self.source_dir, dst='include/RtMidi')
-        self.copy('librtmidi.dylib', src=self.source_dir, dst='lib')
+        self.copy('librtmidi.%s' % libext, src=self.source_dir, dst='lib')
 
         self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
 
