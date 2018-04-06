@@ -8,7 +8,7 @@ class RtMidiConan(ConanFile):
     package_version = '2'
     version = '%s-%s' % (source_version, package_version)
 
-    requires = 'llvm/3.3-2@vuo/stable', \
+    build_requires = 'llvm/3.3-5@vuo/stable', \
                'vuoutils/1.0@vuo/stable'
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://www.music.mcgill.ca/~gary/rtmidi/'
@@ -42,7 +42,7 @@ class RtMidiConan(ConanFile):
 
             # The LLVM/Clang libs get automatically added by the `requires` line,
             # but this package doesn't need to link with them.
-            autotools.libs = []
+            autotools.libs = ['c++abi']
 
             env_vars = {
                 'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
