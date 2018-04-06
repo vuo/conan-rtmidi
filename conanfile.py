@@ -51,9 +51,10 @@ class RtMidiConan(ConanFile):
             with tools.environment_append(env_vars):
                 autotools.configure(build=False,
                                     host=False,
-                                    args=['--quiet',
+                                    args=[#'--quiet',
                                           '--enable-shared'])
-                autotools.make(args=['--quiet'])
+                # autotools.make(args=['--quiet'])
+                autotools.make(args=['AM_DEFAULT_VERBOSITY=2'])
 
             VuoUtils.fixLibs(self.libs, self.deps_cpp_info)
 
