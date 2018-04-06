@@ -13,7 +13,7 @@ class RtMidiTestConan(ConanFile):
         self.copy('*', src='lib', dst='lib')
 
     def test(self):
-        if platform.system() != 'Darwin':
+        if platform.system() != 'Linux':
             self.run('qbs run -f "%s"' % self.source_folder)
 
         # Ensure we only link to system libraries and our own libraries.
