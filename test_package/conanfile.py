@@ -13,11 +13,8 @@ class RtMidiTestConan(ConanFile):
         self.copy('*', src='lib', dst='lib')
 
     def test(self):
-        if platform.system() == 'Darwin':
-            self.run('otool -l lib/librtmidi.dylib')
-        elif platform.system() == 'Linux':
-            self.run('ldd lib/librtmidi.so')
-        self.run('qbs run -f "%s"' % self.source_folder)
+        if platform.system() != 'Darwin':
+            self.run('qbs run -f "%s"' % self.source_folder)
 
         # Ensure we only link to system libraries and our own libraries.
         if platform.system() == 'Darwin':
