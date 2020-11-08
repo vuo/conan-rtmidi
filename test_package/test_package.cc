@@ -14,9 +14,9 @@ int main()
 
 		printf("Successfully initialized RtMidi\n");
 	}
-	catch (RtError &e)
+	catch (RtMidiError &e)
 	{
-		if (e.getType() == RtError::DRIVER_ERROR)
+		if (e.getType() == RtMidiError::DRIVER_ERROR)
 			printf("Couldn't open driver, but we made it this far so RtMidi itself is working.\n");
 		else
 			fprintf(stderr, "Error initializing RtMidi: %s\n", e.what());

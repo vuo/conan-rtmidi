@@ -1,23 +1,31 @@
-from conans import AutoToolsBuildEnvironment, ConanFile, tools
+from conans import ConanFile, CMake, tools
 import platform
 
 class RtMidiConan(ConanFile):
     name = 'rtmidi'
 
-    source_version = '2.0.1'
-    package_version = '3'
+    source_version = '4.0.0'
+    package_version = '0'
     version = '%s-%s' % (source_version, package_version)
 
-    build_requires = 'llvm/3.3-5@vuo/stable', \
-               'vuoutils/1.0@vuo/stable'
+    build_requires = (
+        'llvm/5.0.2-1@vuo/stable',
+        'macos-sdk/11.0-0@vuo/stable',
+        'vuoutils/1.2@vuo/stable',
+    )
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://www.music.mcgill.ca/~gary/rtmidi/'
     license = 'http://www.music.mcgill.ca/~gary/rtmidi/#license'
     description = 'A cross-platform library for realtime MIDI input/output'
+    generators = 'cmake'
     source_dir = 'rtmidi-%s' % source_version
     exports_sources = '*.patch'
+
+    build_dir = '_build'
+    install_dir = '_install'
+
     libs = {
-        'rtmidi': 2,
+        'rtmidi': 5,
     }
 
     def requirements(self):
@@ -28,33 +36,30 @@ class RtMidiConan(ConanFile):
 
     def source(self):
         tools.get('http://www.music.mcgill.ca/~gary/rtmidi/release/rtmidi-%s.tar.gz' % self.source_version,
-                  sha256='b5017a91df0c2bc4c0d5c6548ac5f9696c5bc0c202f6bec704563c6f6bec64ec')
+                  sha256='370cfe710f43fbeba8d2b8c8bc310f314338c519c2cf2865e2d2737b251526cd')
 
-        tools.patch(patch_file='disable-static.patch', base_path=self.source_dir)
-
-        self.run('mv %s/readme %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
+        # README.md contains the license at the end.
+        self.run('sed -n \'/The RtMidi license/,$p\' %s/README.md > %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
 
     def build(self):
+        cmake = CMake(self)
+        cmake.definitions['CMAKE_BUILD_TYPE'] = 'Release'
+        cmake.definitions['CMAKE_C_COMPILER'] = self.deps_cpp_info['llvm'].rootpath + '/bin/clang'
+        cmake.definitions['CMAKE_C_FLAGS'] = '-Oz -DNDEBUG'
+        cmake.definitions['CMAKE_OSX_ARCHITECTURES'] = 'x86_64;arm64'
+        cmake.definitions['CMAKE_OSX_DEPLOYMENT_TARGET'] = '10.11'
+        cmake.definitions['CMAKE_OSX_SYSROOT'] = self.deps_cpp_info['macos-sdk'].rootpath
+        cmake.definitions['CMAKE_INSTALL_PREFIX'] = '../%s' % self.install_dir
+
+        tools.mkdir(self.build_dir)
+        with tools.chdir(self.build_dir):
+            cmake.configure(source_dir='../%s' % self.source_dir,
+                            build_dir='.')
+            cmake.build()
+            cmake.install()
+
         import VuoUtils
-        # RtMIDI doesn't support shadow builds, so build in source_dir.
-        with tools.chdir(self.source_dir):
-            autotools = AutoToolsBuildEnvironment(self)
-
-            # The LLVM/Clang libs get automatically added by the `requires` line,
-            # but this package doesn't need to link with them.
-            autotools.libs = ['c++abi']
-
-            env_vars = {
-                'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
-                'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++ -stdlib=libc++',
-            }
-            with tools.environment_append(env_vars):
-                autotools.configure(build=False,
-                                    host=False,
-                                    args=['--quiet',
-                                          '--enable-shared'])
-                autotools.make(args=['--quiet'])
-
+        with tools.chdir('%s/lib' % self.install_dir):
             VuoUtils.fixLibs(self.libs, self.deps_cpp_info)
 
     def package(self):
@@ -63,8 +68,8 @@ class RtMidiConan(ConanFile):
         elif platform.system() == 'Linux':
             libext = 'so'
 
-        self.copy('*.h', src=self.source_dir, dst='include/RtMidi')
-        self.copy('librtmidi.%s' % libext, src=self.source_dir, dst='lib')
+        self.copy('*.h', src='%s/include' % self.install_dir, dst='include/RtMidi')
+        self.copy('librtmidi.%s' % libext, src='%s/lib' % self.install_dir, dst='lib')
 
         self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
 
